@@ -41,12 +41,6 @@ class AltBase64 {
             $chArr[62] = ' ';
             $chArr[63] = "\n";
 
-            if ($lang === 'en') {
-                $chArr[32] = \chr(1);
-            }
-            for($ctrl = 2; $ctrl < 8; $ctrl++) {
-                $chArr[44+$ctrl] = $ctrl;
-            }
             self::$charSet[$currKey] = $chArr;
         }
         
@@ -58,25 +52,34 @@ class AltBase64 {
     }
     
     public static function encode($str) {
+        $b64stdLen = ceil(\strlen($str) / 3) * 4;
         $arr = self::encodeBytes($str);
-        foreach($arr as $k => $num64) {
-            $out[$k] = self::$base64cs[$num64];
+        if (\count($arr) > $b64stdLen) {
+            $enc = \base64_encode($str);
+            return \rtrim(\strtr($enc, '+/', '-_'), '=');
         }
-        return implode('', $out);
+        $out = ['='];
+        foreach($arr as $k => $num64) {
+            $out[] = self::$base64cs[$num64];
+        }
+        return \implode('', $out);
     }
     
     public static function decode($b64) {
+        if (\substr($b64, 0, 1) !== '=') {
+            return \base64_decode(\strtr($b64, '-_', '+/'));
+        }
         self::$keys4Arr || self::init();
         $len = \strlen($b64);
-        for($p = 0; $p < $len; $p++) {
+        $arr = [];
+        for($p = 1; $p < $len; $p++) {
             $cn = self::$base64cn[$b64[$p]] ?? -1;
             if ($cn < 0) {
                 continue;
             }
             $arr[] = $cn;
         }
-        $arr = self::decodeArrToArr($arr);
-        return implode('', $arr);
+        return \implode('', self::decodeArrToArr($arr));
     }
     
     public static function decodeArrToArr($numArr) {
@@ -88,6 +91,7 @@ class AltBase64 {
 
         $maxPos = \count($numArr) - 1;
         $out = [];
+
         for($currPos = 0; $currPos <= $maxPos; $currPos++) {
             $num64 = $numArr[$currPos];
             switch($num64) {
@@ -110,9 +114,8 @@ class AltBase64 {
                     if ($lang === 'ru') {
                         $lang = 'en';
                         $currKey = $lang . $mode;
-                    } else {
-                        // en+
-                        $out[] = '?';
+                    //} else {
+                        // do nothing
                     }
                     break;
                 case 49: // low
@@ -166,7 +169,7 @@ class AltBase64 {
             } elseif ($cn > 126) {
                 // utf-8 RU or bytes
                 $charIsRu = false;
-                if ($cn > 207 && $cn < 210 && $len > $i + 2) {
+                if ($cn > 207 && $cn < 210 && $len > $i + 1) {
                     $utfChar = \substr($str, $i, 2);
                     if (isset(self::$allCharsRU[$utfChar])) {
                         $i++;
