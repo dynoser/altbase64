@@ -1,6 +1,6 @@
 {
-    "name": "dynoser/altbase64",
-    "description": "Encode and decode altbase64 algorithm (alternative to base64 for latin and cyrillic texts)",
+    "name": "dynoser/base64alt",
+    "description": "Encode and decode base64alt (base64 + altbase64 + base64url)",
     "license": "Apache-2.0",
     "authors": [
         {
@@ -10,7 +10,7 @@
     ],
     "autoload": {
         "classmap": [
-            "src/altbase64.php"
+            "src/Base64Alt.php"
         ]
     },
     "require-dev": {
@@ -18,7 +18,7 @@
     },
     "extra": {
         "dyno-nsmap": {
-            "dynoser\\altbase64\\altbase64": "@/dynoser/altbase64/src/altbase64.php"
+            "dynoser\\base64\\base64alt": "@/dynoser/base64alt/src/Base64Alt.php"
         }
     }
 }
