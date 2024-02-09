@@ -25,11 +25,8 @@ class Base64Alt {
             self::$keys4Arr[] = $currKey;
             self::$fromChToNum64[$currKey] = [];
             $chArr = \explode(' ', $str);
-            $lang = \substr($currKey, 0, 2); // en or ru
-            //$mode = \substr($key, -3); // Low or Upc
             foreach($chArr as $n => $utfChar) {
                 if ($utfChar !== '') {
-                    //echo "$lang $mode $n $utfChar\n";
                     self::$fromChToNum64[$currKey][$utfChar] = $n;
                     if (\strlen($utfChar) > 1) {
                         self::$allCharsRU[$utfChar] = $n;
@@ -51,7 +48,7 @@ class Base64Alt {
         self::$base64cn['/'] = 63;
     }
     
-    public static function encode($str) {
+    public static function encodeSwitch($str) {
         $b64stdLen = 4 * \ceil(\strlen($str) / 3);
         $arr = self::encodeBytes($str);
         if (\count($arr) > $b64stdLen) {
@@ -65,7 +62,7 @@ class Base64Alt {
         return \implode('', $out);
     }
     
-    public static function decode($b64) {
+    public static function decodeSwitch($b64) {
         if (\substr($b64, 0, 1) !== '=') {
             return \base64_decode(\strtr($b64, '-_', '+/'));
         }
@@ -82,32 +79,32 @@ class Base64Alt {
         return \implode('', self::decodeBytes($arr));
     }
     
-    public static function decodeBytes($numArr) {
+    public static function decodeBytes($num64Arr) {
 
         $currKey = 'enLow';
         $lang = 'en';
         $mode = 'Low';
         $up1 = false;
 
-        $maxPos = \count($numArr) - 1;
+        $maxPos = \count($num64Arr) - 1;
         $out = [];
 
         for($currPos = 0; $currPos <= $maxPos; $currPos++) {
-            $num64 = $numArr[$currPos];
+            $num64 = $num64Arr[$currPos];
             switch($num64) {
                 case 46: // b128+
                     if ($currPos < $maxPos) {
-                        $out[] = \chr($numArr[++$currPos] + 128);
+                        $out[] = \chr($num64Arr[++$currPos] + 128);
                     }
                     break;                    
                 case 47: // b192+
                     if ($currPos < $maxPos) {
-                        $out[] = \chr($numArr[++$currPos] + 192);
+                        $out[] = \chr($num64Arr[++$currPos] + 192);
                     }
                     break;                    
                 case 48: // en+
-                    if ($currPos < $maxPos && $numArr[$currPos+1] > 31) {
-                        $bNum = $numArr[++$currPos] - 32;
+                    if ($currPos < $maxPos && $num64Arr[$currPos+1] > 31) {
+                        $bNum = $num64Arr[++$currPos] - 32;
                         $out[] = \chr($bNum === 10 ? 127 : $bNum);
                         break;
                     }
@@ -148,11 +145,14 @@ class Base64Alt {
         return $out;
     }
     
-    public static function encodeBytes($str) {
+    public static function encodeBytes($str, $brkLen = 0) {
         self::$keys4Arr || self::init();
         $out = [];
         $currKey = 'enLow';
         $len = \strlen($str);
+        
+        $prevUp1 = -1;
+        
         for($i = 0; $i < $len; $i++){
             $utfChar = $str[$i];
             $cn = \ord($utfChar);
@@ -191,6 +191,7 @@ class Base64Alt {
             
             if (isset(self::$fromChToNum64[$currKey][$utfChar])) {
                 $out[] = self::$fromChToNum64[$currKey][$utfChar];
+                $prevUp1 = -1;
                 continue;
             }
 
@@ -248,22 +249,14 @@ class Base64Alt {
                     if ($changedNum & 1) {
                         if ($currKeyNum & 1) {
                             // current is UP-case, will changed to lowerCase
-                            $cc = \count($out) - 2;
-                            // check Up1 possibility for prev.char
-                            $canUp1 = ($cc >= 0 && $out[$cc] === 51);
-                            if ($canUp1 && $cc > 0) {
-                                $prePre = $out[$cc - 1];
-                                if ($prePre > 45 && $prePre < 49) {
-                                    $canUp1 = false;
-                                }
-                            }
-                            if ($canUp1) {
-                                $out[$cc] = 50;
-                            } else {
+                            if ($prevUp1 < 0) {
                                 $out[] = 49; // ctrl 7 low
+                            } else {
+                                $out[$prevUp1] = 50;
                             }
                         } else {
                             // current is lower-case, will be changed to UP
+                            $prevUp1 = \count($out);
                             $out[] = 51; // ctrl 5 caps
                         }
                     }
@@ -284,9 +277,14 @@ class Base64Alt {
                     throw new \Exception("Unexpected");
                 }
                 
+                if ($brkLen && \count($out)>$brkLen) {
+                    return null;
+                }
             }
+        }
+        if ($brkLen && \count($out)>$brkLen) {
+            return null;
         }
         return $out;
     }
 }
-
