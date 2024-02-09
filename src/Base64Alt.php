@@ -1,7 +1,7 @@
 <?php
-namespace dynoser\altbase64;
+namespace dynoser\base64;
 
-class AltBase64 {
+class Base64Alt {
     public static $base64cs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
     public static $base64cn = []; // [char] => num64
 
@@ -52,7 +52,7 @@ class AltBase64 {
     }
     
     public static function encode($str) {
-        $b64stdLen = ceil(\strlen($str) / 3) * 4;
+        $b64stdLen = 4 * \ceil(\strlen($str) / 3);
         $arr = self::encodeBytes($str);
         if (\count($arr) > $b64stdLen) {
             $enc = \base64_encode($str);
@@ -79,10 +79,10 @@ class AltBase64 {
             }
             $arr[] = $cn;
         }
-        return \implode('', self::decodeArrToArr($arr));
+        return \implode('', self::decodeBytes($arr));
     }
     
-    public static function decodeArrToArr($numArr) {
+    public static function decodeBytes($numArr) {
 
         $currKey = 'enLow';
         $lang = 'en';
@@ -114,8 +114,6 @@ class AltBase64 {
                     if ($lang === 'ru') {
                         $lang = 'en';
                         $currKey = $lang . $mode;
-                    //} else {
-                        // do nothing
                     }
                     break;
                 case 49: // low
